@@ -3,7 +3,7 @@ import sys
 import os
 import string
 
-def make_plot_filename(main_title, directory='.', config_dict={}, use_time=True, sep='_', extension=''):
+def make_filename(main_title, directory='.', config_dict={}, use_time=True, sep='_', extension=''):
     """
     :param main_title: the main title for the file
     :type string:
