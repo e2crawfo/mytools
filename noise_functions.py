@@ -62,7 +62,6 @@ def make_f(generators, times):
     last_time = [0.0]
     def f(t):
         if len(generators) > 1 and t > times[0] + last_time[0]:
-            print "pop"
             generators.pop(0)
             last_time[0] += times.pop(0)
         return generators[0].next()
