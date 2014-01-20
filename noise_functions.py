@@ -11,6 +11,14 @@ def default_noise(vec):
 def flip_noise(vec):
     return -vec
 
+def ortho_vector(vec):
+    dim = len(vec)
+    ortho = hrr.HRR(dim).v
+    proj = np.dot(vec, ortho) * vec
+    ortho -= proj
+    assert np.allclose([np.dot(ortho, vec)], [0])
+    return ortho
+
 import random
 def make_hrr_noise(D, num):
     def hrr_noise(input_vec):
@@ -57,6 +65,18 @@ def output(trial_length, main, main_vector, alternate, noise_func=default_noise)
 
         yield vector
 
+def interpolator(end_time, start_vec, end_vec, time_func=lambda x: x):
+    tick = 0
+    while True:
+        t = time_func(tick)
+        t = min(t, end_time)
+
+        vector = (end_time - t) * start_vec + t * end_vec
+        vector = vector / np.linalg.norm(vector)
+        tick += 1
+
+        yield vector
+
 
 def make_f(generators, times):
     last_time = [0.0]
@@ -66,3 +86,4 @@ def make_f(generators, times):
             last_time[0] += times.pop(0)
         return generators[0].next()
     return f
+
