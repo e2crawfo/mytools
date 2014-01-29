@@ -7,7 +7,7 @@ def remove_xlabels():
     frame = plt.gca()
     frame.axes.get_xaxis().set_ticklabels([])
 
-def spike_plot(offset, t, sim, probe, label='', removex=True, slice=None):
+def spike_plot(offset, t, sim, probe, label='', removex=True, yticks=None, slice=None, xlabel=None):
 
     data = sim.data(probe)
 
@@ -18,12 +18,16 @@ def spike_plot(offset, t, sim, probe, label='', removex=True, slice=None):
     ax = plt.subplot(offset)
     rasterplot(t, data, label=label)
     plt.ylabel(label)
+    if yticks is not None:
+        plt.yticks(yticks)
+    if xlabel is not None:
+        plt.xlabel(xlabel)
     if removex:
         remove_xlabels()
     offset += 1
     return ax, offset
 
-def nengo_plot_helper(offset, t, sim, probe, label='', func=None, removex=False, slice=None):
+def nengo_plot_helper(offset, t, sim, probe, label='', func=None, removex=False, yticks=None, slice=None, suppl=None, xlabel=None):
 
     if isinstance(probe, list):
         data = []
@@ -44,8 +48,27 @@ def nengo_plot_helper(offset, t, sim, probe, label='', func=None, removex=False,
         data = data[slice, :]
         t = t[slice]
 
-    if func is not None and callable(func):
-        data = np.array([func(d) for d in data])
+    if func is not None:
+        if isinstance(func, list):
+            func_list = func
+        else:
+            func_list = [func]
+
+        newdata = None
+        for i, func in enumerate(func_list):
+            if callable(func):
+                if suppl:
+                    fdata = np.array([func(d,s) for d,s in zip(data, suppl)])[:, np.newaxis]
+                else:
+                    fdata = np.array([func(d) for d in data])[:, np.newaxis]
+
+                if newdata is None:
+                    newdata = fdata
+                else:
+                    newdata = np.concatenate((newdata, fdata), axis=1)
+
+        if newdata is not None:
+            data = newdata
 
     if data.ndim > 1 and data.shape[1] > 600:
         mins = np.min(data, axis=1)[:, np.newaxis]
@@ -56,15 +79,20 @@ def nengo_plot_helper(offset, t, sim, probe, label='', func=None, removex=False,
     plt.plot(t, data, label=label)
     plt.ylabel(label)
     plt.xlim(min(t), max(t))
+    if yticks is not None:
+        plt.yticks(yticks)
+    if xlabel is not None:
+        plt.xlabel(xlabel)
     if removex:
         remove_xlabels()
     offset += 1
 
     return ax, offset
 
-def nengo_stack_plot(offset, t, sim, probe, func=None, label='', removex=False, slice=None):
+def nengo_stack_plot(offset, t, sim, probe, func=None, label='',
+                     removex=False, yticks=None, slice=None, suppl=None, xlabel=None):
     if hasattr(probe, 'attr') and probe.attr == 'spikes':
-        return spike_plot(offset, t, sim, probe, label, removex, slice)
+        return spike_plot(offset, t, sim, probe, label, removex, yticks, slice, xlabel=xlabel)
     else:
-        return nengo_plot_helper(offset, t, sim, probe, label, func, removex, slice)
+        return nengo_plot_helper(offset, t, sim, probe, label, func, removex, yticks, slice, suppl, xlabel=xlabel)
 
