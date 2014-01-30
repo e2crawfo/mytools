@@ -3,6 +3,13 @@ import nengo
 from nengo.matplotlib import rasterplot
 import numpy as np
 
+spike_sorting = True
+try:
+    from Pycluster import kcluster
+except:
+    spike_sorting = False
+    print "Couldn't import scipy.cluster. Can't sort spikes."
+
 def remove_xlabels():
     frame = plt.gca()
     frame.axes.get_xaxis().set_ticklabels([])
@@ -10,6 +17,9 @@ def remove_xlabels():
 def nengo_plot_helper(offset, t, data, label='', removex=True, yticks=None, xlabel=None, spikes=False):
     ax = plt.subplot(offset)
     if spikes:
+        s = np.index_exp[:5000, :]
+
+        data = spike_sorter(t, data, 5, s)
         rasterplot(t, data, label=label)
     else:
         plt.plot(t, data, label=label)
@@ -91,4 +101,28 @@ def extract_probe_data(t, sim, probe, func=None, slice=None, suppl=None, spikes=
         data = np.concatenate((mins, maxs), axis=1)
 
     return data, t
+
+def spike_sorter(t, spikes, k, slice=None):
+    if not spike_sorting:
+        print "Can't sort spikes."
+        return t, spikes
+
+    if slice is not None:
+        cluster_data = spikes[slice]
+    else:
+        cluster_data = spikes
+
+    print cluster_data.shape
+
+
+    labels, distortion, _ = kcluster(cluster_data.T, k)
+    print labels
+
+    order = range(spikes.shape[1])
+    order.sort(key = lambda l: labels[l])
+    print order
+
+    spikes = spikes[:, order]
+    return spikes
+
 
