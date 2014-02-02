@@ -70,13 +70,26 @@ def extract_probe_data(t, sim, probe, func=None, slice=None, suppl=None, spikes=
         data = data[slice, :]
         t = t[slice]
 
+    newdata = apply_funcs(func, data, suppl)
+    if newdata is not None:
+        data = newdata
+
+    if data.ndim > 1 and data.shape[1] > 600:
+        mins = np.min(data, axis=1)[:, np.newaxis]
+        maxs = np.max(data, axis=1)[:, np.newaxis]
+        data = np.concatenate((mins, maxs), axis=1)
+
+    return data, t
+
+def apply_funcs(func, data, suppl=None):
+    newdata = None
+
     if func is not None:
         if isinstance(func, list):
             func_list = func
         else:
             func_list = [func]
 
-        newdata = None
         for i, func in enumerate(func_list):
             if callable(func):
                 if suppl:
@@ -88,16 +101,8 @@ def extract_probe_data(t, sim, probe, func=None, slice=None, suppl=None, spikes=
                     newdata = fdata
                 else:
                     newdata = np.concatenate((newdata, fdata), axis=1)
+    return newdata
 
-        if newdata is not None:
-            data = newdata
-
-    if data.ndim > 1 and data.shape[1] > 600:
-        mins = np.min(data, axis=1)[:, np.newaxis]
-        maxs = np.max(data, axis=1)[:, np.newaxis]
-        data = np.concatenate((mins, maxs), axis=1)
-
-    return data, t
 
 def spike_sorter(spikes, k, slice=None, binsize=None):
     if not spike_sorting:
