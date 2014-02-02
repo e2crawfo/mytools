@@ -17,9 +17,6 @@ def remove_xlabels():
 def nengo_plot_helper(offset, t, data, label='', removex=True, yticks=None, xlabel=None, spikes=False):
     ax = plt.subplot(offset)
     if spikes:
-        s = np.index_exp[:5000, :]
-
-        data = spike_sorter(t, data, 5, s)
         rasterplot(t, data, label=label)
     else:
         plt.plot(t, data, label=label)
@@ -102,7 +99,7 @@ def extract_probe_data(t, sim, probe, func=None, slice=None, suppl=None, spikes=
 
     return data, t
 
-def spike_sorter(t, spikes, k, slice=None):
+def spike_sorter(spikes, k, slice=None, binsize=None):
     if not spike_sorting:
         print "Can't sort spikes."
         return t, spikes
@@ -112,15 +109,22 @@ def spike_sorter(t, spikes, k, slice=None):
     else:
         cluster_data = spikes
 
-    print cluster_data.shape
 
+    if binsize is not None:
+        new_data = np.zeros((0, cluster_data.shape[1]))
 
-    labels, distortion, _ = kcluster(cluster_data.T, k)
+        for i in range(int(np.ceil(np.true_divide(cluster_data.shape[0], binsize)))):
+            lo = i* binsize
+            hi= min((i+1) * binsize, cluster_data.shape[0])
+            new_data = np.concatenate((new_data, np.sum(cluster_data[lo:hi, :], axis=0)[np.newaxis,:]), axis=0)
+
+        cluster_data = new_data
+
+    labels, distortion, _ = kcluster(cluster_data.T, k, npass=30)
     print labels
 
     order = range(spikes.shape[1])
     order.sort(key = lambda l: labels[l])
-    print order
 
     spikes = spikes[:, order]
     return spikes
