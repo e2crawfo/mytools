@@ -30,7 +30,7 @@ def make_filename(main_title, directory='.', config_dict={}, use_time=True, sep=
 
     labels = [directory + main_title]
     for label, value in config_dict.iteritems():
-        if not str(label) in omit:
+        if not str(label) in omit and not hasattr(value, '__len__'):
             labels.append(str(label))
             labels.append(str(value))
 
