@@ -15,7 +15,9 @@ def remove_xlabels():
     frame.axes.get_xaxis().set_ticklabels([])
 
 def nengo_plot_helper(offset, t, data, label='', removex=True, yticks=None, xlabel=None, spikes=False):
-    ax = plt.subplot(offset)
+    if offset:
+        plt.subplot(offset)
+
     if spikes:
         rasterplot(t, data, label=label)
     else:
@@ -30,6 +32,8 @@ def nengo_plot_helper(offset, t, data, label='', removex=True, yticks=None, xlab
     if removex:
         remove_xlabels()
     offset += 1
+
+    ax = plt.gca()
 
     return ax, offset
 
@@ -126,7 +130,6 @@ def spike_sorter(spikes, k, slice=None, binsize=None):
         cluster_data = new_data
 
     labels, distortion, _ = kcluster(cluster_data.T, k, npass=30)
-    print labels
 
     order = range(spikes.shape[1])
     order.sort(key = lambda l: labels[l])
