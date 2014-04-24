@@ -5,10 +5,10 @@ import numpy as np
 
 spike_sorting = True
 try:
-    from Pycluster import kcluster
+    from scipy.cluster.vq import whiten, kmeans2
 except:
     spike_sorting = False
-    print "Couldn't import scipy.cluster. Can't sort spikes."
+    print "Couldn't import scipy.cluster. Can't cluster spikes."
 
 def remove_xlabels():
     frame = plt.gca()
@@ -108,10 +108,24 @@ def apply_funcs(func, data, suppl=None):
     return newdata
 
 
-def spike_sorter(spikes, k, slice=None, binsize=None):
-    if not spike_sorting:
-        print "Can't sort spikes."
-        return t, spikes
+def spike_sorter(spikes, k=None, slice=None, binsize=None):
+    """
+    Sort neurons according to their spiking profile.
+
+    If k is None, neurons sorted based on time of first spike.
+    Otherwise, neurons sorted using kmeans clustering algorithm, with k clusters.
+
+    Args:
+    spikes -- an array of spikes as returned by a nengo 2.0 probe.
+
+    k -- the number of clusters. Sorting instead of clustering if k is None.
+
+    slice -- slice along the first dimension of the spike array.
+
+    binsize -- if > 1, binsize contiguous time points are summed to create a single time
+               point. Allows clustering based on lower frequency activity. Used only if
+               k is not None.
+    """
 
     if slice is not None:
         cluster_data = spikes[slice]
@@ -129,12 +143,29 @@ def spike_sorter(spikes, k, slice=None, binsize=None):
 
         cluster_data = new_data
 
-    labels, distortion, _ = kcluster(cluster_data.T, k, npass=30)
+    cluster_data = cluster_data.T
+
+    if k is None or not spike_sorting:
+        firsts = []
+        for row in cluster_data:
+            first = np.nonzero(row)[0]
+            if first.size > 0:
+                first = np.min(first)
+            else:
+                first = row.size
+            firsts.append(first)
+
+        firsts = np.array(firsts)
+        labels = firsts[:, np.newaxis]
+    else:
+        # NB: There is a bug in scipy to the effect that if initial clusters are not supplied (the second argument)
+        # then this call will fail. Something to do with Cholesky decomposition, and a matrix not being pos-def.
+        centroids, labels = kmeans2(cluster_data, cluster_data[:k, :], iter=100)
 
     order = range(spikes.shape[1])
     order.sort(key = lambda l: labels[l])
-
     spikes = spikes[:, order]
+
     return spikes
 
 
