@@ -27,12 +27,12 @@ class HRR:
         self.v=array([random.gauss(0,1) for i in range(N)])
         self.normalize()
     def make_unitary(self):
-        fft_val = np.fft(self.v)
+        fft_val = np.fft.fft(self.v)
         fft_imag = fft_val.imag
         fft_real = fft_val.real
         fft_norms = [sqrt(fft_imag[n]**2 + fft_real[n]**2) for n in range(len(self.v))]
         fft_unit = fft_val / fft_norms
-        self.v = (np.ifft(fft_unit)).real
+        self.v = (np.fft.ifft(fft_unit)).real
     def __add__(self,other):
         return HRR(data=self.v+other.v)
     def __iadd__(self,other):
