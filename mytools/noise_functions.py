@@ -78,9 +78,12 @@ def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose
     expression is assumed to specify superpositions of convolutions of HRR vectors.
     The convolved vectors can also be inverted.
 
-    Special characters:
+    Special subsstrings:
     '!' : Must include exactly one instance. Acts as a placeholder for input vector.
     '?' : Each instance of '?' is replaced by a random HRR vector.
+    '?u' : Each instance of '?u' is replaced by a random unitary HRR vector.
+
+    Vectors filling '?' and '?u' are generated anew for each call of the returned function.
 
     Some examples of valid strings:
 
@@ -105,10 +108,15 @@ def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose
     original = expression
 
     placeholder = 'p0'
+    expression = expression.replace('!', placeholder)
+
+    num_unitary_wildcards = expression.count('?u')
+    expression = expression.replace('?u', '%s')
+    unitary_names = ['u'+str(i) for i in range(num_unitary_wildcards)]
+    expression = expression % tuple(unitary_names)
 
     num_wildcards = expression.count('?')
     expression = expression.replace('?', '%s')
-    expression = expression.replace('!', placeholder)
     temp_names = ['h'+str(i) for i in range(num_wildcards)]
     expression = expression % tuple(temp_names)
 
@@ -126,7 +134,6 @@ def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose
     if query_vectors is None:
         raise ValueError('HRR string must contain the placeholder: ' + placeholder)
 
-    expression = expression.replace('!', 'p0')
 
     if verbose:
         print 'Evaluated expression: ', expression
@@ -135,13 +142,21 @@ def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose
     def hrr_noise_from_string(input_vec):
         """
         Uses expression, names, query_vectors from wrapper function
+
+        Args:
+
+        input_vec -- the vector to add noise to. Can be an HRR vector or a numpy ndarry.
+                     Returns a noisy vector of the same type is input_vec.
+
         """
 
         use_ndarray = type(input_vec) == np.ndarray
         if use_ndarray:
             input_vec = hrr.HRR(data=input_vec)
 
-        vocab = hrr.Vocabulary(D)
+
+        vocab = hrr.Vocabulary(D, unitary=unitary_names)
+
         for n, v in names.iteritems():
             vocab.add(n, v)
 
@@ -215,6 +230,11 @@ def make_f(generators, times):
 
 if __name__ == "__main__":
     D = 512
+    i = hrr.HRR(D)
+    #f = make_hrr_noise_from_string(D, '?*?*?*!*?')
+    f = make_hrr_noise_from_string(D, '?u*?u*?*!*?u')
+    x= f(i)
+    print i.compare(x)
 
     i = hrr.HRR(D)
     f = make_hrr_noise_from_string(D, '?*? *? + ? * ? * ? + ? * ? * ! + ?*?', normalize=False)
