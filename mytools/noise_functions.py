@@ -68,6 +68,35 @@ def make_hrr_noise(D, N, normalize=False):
 
     return hrr_noise
 
+def find_query_vectors(expression, placeholder):
+    """
+    Find the names of the vectors in expression which, when used as a query vector,
+    will extract the vector at the position of the placeholder, assuming expression
+    is a superposition of convolutions
+
+    Args:
+
+    expression -- string specifiying an HRR expression as superposition of convolutions
+
+    placeholder -- string specifiying the position of the thing we're going to extract
+
+    """
+    terms = expression.split('+')
+
+    query_vectors = None
+    for term in terms:
+        if placeholder in term:
+            query_vectors = term.split('*')
+            query_vectors = [qv.strip() for qv in query_vectors]
+            query_vectors.remove(placeholder)
+            break
+
+    if query_vectors is None:
+        raise ValueError('HRR string must contain the placeholder: ' + placeholder)
+
+    return query_vectors
+
+
 def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose=False):
     """
     Returns a function that takes an input vector and returns a version of that vector
@@ -120,20 +149,9 @@ def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose
     temp_names = ['h'+str(i) for i in range(num_wildcards)]
     expression = expression % tuple(temp_names)
 
-    terms = expression.split('+')
+    query_vectors = find_query_vectors(expression, placeholder)
 
-    #Find the placeholder - assuming superposition of convolutions
-    query_vectors = None
-    for term in terms:
-        if placeholder in term:
-            query_vectors = term.split('*')
-            query_vectors = [qv.strip() for qv in query_vectors]
-            query_vectors.remove(placeholder)
-            break
-
-    if query_vectors is None:
-        raise ValueError('HRR string must contain the placeholder: ' + placeholder)
-
+    unitary_names += [u for u in names if u[-2:] == "_u"]
 
     if verbose:
         print 'Evaluated expression: ', expression
@@ -153,7 +171,6 @@ def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose
         use_ndarray = type(input_vec) == np.ndarray
         if use_ndarray:
             input_vec = hrr.HRR(data=input_vec)
-
 
         vocab = hrr.Vocabulary(D, unitary=unitary_names)
 
@@ -181,6 +198,7 @@ def make_hrr_noise_from_string(D, expression, names={}, normalize=False, verbose
         return noisy
 
     return hrr_noise_from_string
+
 
 
 def output(trial_length, main, main_vector, alternate, noise_func=default_noise):
