@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import nengo
-from nengo.matplotlib import rasterplot
+from nengo.utils.matplotlib import rasterplot
 import numpy as np
 
 spike_sorting = True
