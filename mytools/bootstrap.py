@@ -1,8 +1,7 @@
 import random
 import re
-
-import utilities as util
-
+import os
+import warnings
 
 def draw_bootstrap_samples(data, num, rng=random):
   samples = []
@@ -46,8 +45,8 @@ class Bootstrapper:
     self.seed = seed
     self.rng = random.Random(seed)
     self.float_re = re.compile(r"""-*\d +  # the integral part
-                   \.    # the decimal point
-                   \d *  # some fractional digits""", re.X)
+                               \.    # the decimal point
+                              \d *  # some fractional digits""", re.X)
 
   def read_bootstrap_file(self, filename, match_regex=r".*", ignore_regex=r"a^"):
     """Collects data from a file previously created from an instance of the Bootstrap class
@@ -69,6 +68,9 @@ class Bootstrapper:
 
     match_regex = re.compile(match_regex)
     ignore_regex = re.compile(ignore_regex)
+
+    if not os.path.isfile(filename):
+        return warnings.warn("read_bootstrap_file: %s is not a valid file" % filename)
 
     num_summaries = 0
     with open(filename) as bs_file:
@@ -176,7 +178,7 @@ class Bootstrapper:
       close = True
 
     title = "Bootstrap Summary"
-    util.print_header(output_file, title)
+    print_header(output_file, title)
 
     data_keys = self.data.keys()
     data_keys.sort()
@@ -194,7 +196,19 @@ class Bootstrapper:
       if self.write_raw_data:
         output_file.write("raw data: " + str(s) + "\n")
 
-    util.print_footer(output_file, title)
+    print_footer(output_file, title)
 
     if close:
       output_file.close()
+
+def print_header(output_file, string, char='*', width=15, left_newline=True):
+  line = char * width
+  string = line + " " + string + " " + line + "\n"
+
+  if left_newline:
+    string = "\n" + string
+
+  output_file.write(string)
+
+def print_footer(output_file, string, char='*', width=15):
+  print_header(output_file, "End " + string, char=char, width=width, left_newline=False)
