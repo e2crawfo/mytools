@@ -51,10 +51,7 @@ class Bootstrapper:
         self.write_raw_data = write_raw_data
         self.seed = seed
         self.rng = random.Random(seed)
-        self.float_re = re.compile(r"""-*\d +    # the integral part
-                                       \.        # the decimal point
-                                       d *    # some fractional digits""",
-                                   re.X)
+        self.float_re = re.compile(r"""-*\d+.\d*""", re.X)
 
     def read_bootstrap_file(self, filename,
                             match_regex=r".*", ignore_regex=r"a^"):
@@ -105,7 +102,6 @@ class Bootstrapper:
                         break
 
             line = bs_file.next()
-            # line = bs_file.next()
 
             while "End Bootstrap Summary" not in line:
                 name = bs_file.next()
@@ -120,11 +116,12 @@ class Bootstrapper:
                 raw_data = bs_file.next()
 
                 if "raw data" not in raw_data:
-                    return
-
-                raw_data = self.float_re.findall(raw_data)
+                    raise Exception("Error reading bootstrap file."
+                                    " No raw data in file")
 
                 if match_regex.search(name) and not ignore_regex.search(name):
+                    raw_data = self.float_re.findall(raw_data)
+
                     for rd in raw_data:
                         self.add_data(name, rd)
 
