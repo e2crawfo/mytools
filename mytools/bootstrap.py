@@ -150,8 +150,8 @@ class Bootstrapper:
         self.data[index].append(float(data))
 
         if self.verbose:
-            print "Bootstrapper adding data ... name: ", index
-            print ", data: ", data
+            print ("Bootstrapper adding data ..."
+                   "name: %s, data: %s" % (index, data))
 
     def get_stats(self, index):
         """
