@@ -5,16 +5,19 @@ import numpy as np
 
 spike_sorting = True
 try:
-    from scipy.cluster.vq import whiten, kmeans2
+    from scipy.cluster.vq import kmeans2
 except:
     spike_sorting = False
     print "Couldn't import scipy.cluster. Can't cluster spikes."
+
 
 def remove_xlabels():
     frame = plt.gca()
     frame.axes.get_xaxis().set_ticklabels([])
 
-def nengo_plot_helper(offset, t, data, label='', removex=True, yticks=None, xlabel=None, spikes=False):
+
+def nengo_plot_helper(offset, t, data, label='', removex=True, yticks=None,
+                      xlabel=None, spikes=False):
     if offset:
         plt.subplot(offset)
 
@@ -37,17 +40,27 @@ def nengo_plot_helper(offset, t, data, label='', removex=True, yticks=None, xlab
 
     return ax, offset
 
+
 def nengo_stack_plot(offset, t, sim, probe, func=None, label='',
-                     removex=False, yticks=None, slice=None, suppl=None, xlabel=None):
+                     removex=False, yticks=None, slice=None, suppl=None,
+                     xlabel=None):
     if hasattr(probe, 'attr') and probe.attr == 'spikes':
 
-        data, t = extract_probe_data(t, sim, probe, func, slice, suppl, spikes=True)
-        return nengo_plot_helper(offset, t, data, label, removex, yticks, xlabel=xlabel, spikes=True)
+        data, t = extract_probe_data(
+            t, sim, probe, func, slice, suppl, spikes=True)
+        return nengo_plot_helper(
+            offset, t, data, label, removex, yticks,
+            xlabel=xlabel, spikes=True)
     else:
-        data, t = extract_probe_data(t, sim, probe, func, slice, suppl, spikes=False)
-        return nengo_plot_helper(offset, t, data, label, removex, yticks, xlabel=xlabel, spikes=False)
+        data, t = extract_probe_data(
+            t, sim, probe, func, slice, suppl, spikes=False)
+        return nengo_plot_helper(
+            offset, t, data, label, removex, yticks,
+            xlabel=xlabel, spikes=False)
 
-def extract_probe_data(t, sim, probe, func=None, slice=None, suppl=None, spikes=False):
+
+def extract_probe_data(t, sim, probe, func=None, slice=None,
+                       suppl=None, spikes=False):
     if spikes:
         data = sim.data(probe)
         if slice is not None:
@@ -66,7 +79,8 @@ def extract_probe_data(t, sim, probe, func=None, slice=None, suppl=None, spikes=
         data = sim.data(probe)
 
     if data.ndim > 2:
-        data = np.reshape(data, (data.shape[0], int(data.size / data.shape[0])))
+        data = np.reshape(
+            data, (data.shape[0], int(data.size / data.shape[0])))
     elif data.ndim == 1:
         data = data[:, np.newaxis]
 
@@ -85,6 +99,7 @@ def extract_probe_data(t, sim, probe, func=None, slice=None, suppl=None, spikes=
 
     return data, t
 
+
 def apply_funcs(func, data, suppl=None):
     newdata = None
 
@@ -97,7 +112,9 @@ def apply_funcs(func, data, suppl=None):
         for i, func in enumerate(func_list):
             if callable(func):
                 if suppl:
-                    fdata = np.array([func(d,s) for d,s in zip(data, suppl)])[:, np.newaxis]
+                    fdata = np.array(
+                        [func(d, s) for d, s
+                         in zip(data, suppl)])[:, np.newaxis]
                 else:
                     fdata = np.array([func(d) for d in data])[:, np.newaxis]
 
@@ -113,7 +130,8 @@ def spike_sorter(spikes, k=None, slice=None, binsize=None):
     Sort neurons according to their spiking profile.
 
     If k is None, neurons sorted based on time of first spike.
-    Otherwise, neurons sorted using kmeans clustering algorithm, with k clusters.
+    Otherwise, neurons sorted using kmeans clustering algorithm, with
+    k clusters.
 
     Args:
     spikes -- an array of spikes as returned by a nengo 2.0 probe.
@@ -122,9 +140,9 @@ def spike_sorter(spikes, k=None, slice=None, binsize=None):
 
     slice -- slice along the first dimension of the spike array.
 
-    binsize -- if > 1, binsize contiguous time points are summed to create a single time
-               point. Allows clustering based on lower frequency activity. Used only if
-               k is not None.
+    binsize -- if > 1, binsize contiguous time points are summed to create a
+               single time point. Allows clustering based on lower frequency
+               activity. Used only if k is not None.
     """
 
     if slice is not None:
@@ -132,14 +150,17 @@ def spike_sorter(spikes, k=None, slice=None, binsize=None):
     else:
         cluster_data = spikes
 
-
     if binsize is not None:
         new_data = np.zeros((0, cluster_data.shape[1]))
 
-        for i in range(int(np.ceil(np.true_divide(cluster_data.shape[0], binsize)))):
-            lo = i* binsize
-            hi= min((i+1) * binsize, cluster_data.shape[0])
-            new_data = np.concatenate((new_data, np.sum(cluster_data[lo:hi, :], axis=0)[np.newaxis,:]), axis=0)
+        num_bins = int(np.ceil(np.true_divide(cluster_data.shape[0], binsize)))
+
+        for i in range(num_bins):
+            lo = i * binsize
+            hi = min((i+1) * binsize, cluster_data.shape[0])
+            binned_data = np.sum(cluster_data[lo:hi, :], axis=0)[np.newaxis, :]
+
+            new_data = np.concatenate((new_data, binned_data), axis=0)
 
         cluster_data = new_data
 
@@ -158,14 +179,15 @@ def spike_sorter(spikes, k=None, slice=None, binsize=None):
         firsts = np.array(firsts)
         labels = firsts[:, np.newaxis]
     else:
-        # NB: There is a bug in scipy to the effect that if initial clusters are not supplied (the second argument)
-        # then this call will fail. Something to do with Cholesky decomposition, and a matrix not being pos-def.
-        centroids, labels = kmeans2(cluster_data, cluster_data[:k, :], iter=100)
+        # NB: There is a bug in scipy to the effect that if initial clusters
+        # are not supplied (the second argument) then this call will fail.
+        # Something to do with Cholesky decomposition, and a matrix not being
+        # pos-def.
+        centroids, labels = kmeans2(
+            cluster_data, cluster_data[:k, :], iter=100)
 
     order = range(spikes.shape[1])
-    order.sort(key = lambda l: labels[l])
+    order.sort(key=lambda l: labels[l])
     spikes = spikes[:, order]
 
     return spikes
-
-
