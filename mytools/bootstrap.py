@@ -51,7 +51,7 @@ class Bootstrapper:
         self.write_raw_data = write_raw_data
         self.seed = seed
         self.rng = random.Random(seed)
-        self.float_re = re.compile(r"""-*\d+.\d*""", re.X)
+        self.float_re = re.compile(r'-*\d+.\d+(?:e-?\d+)?', re.X)
 
     def read_bootstrap_file(self, filename,
                             match_regex=r".*", ignore_regex=r"a^"):
