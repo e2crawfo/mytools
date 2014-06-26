@@ -1,7 +1,6 @@
 import random
 import re
 import os
-import warnings
 
 
 def draw_bootstrap_samples(data, num, rng=random):
@@ -80,7 +79,7 @@ class Bootstrapper:
         ignore_regex = re.compile(ignore_regex)
 
         if not os.path.isfile(filename):
-            return warnings.warn(
+            raise Exception(
                 "read_bootstrap_file: %s is not a valid file" % filename)
 
         num_summaries = 0
@@ -90,7 +89,9 @@ class Bootstrapper:
                     num_summaries += 1
 
         if not num_summaries:
-            return
+            raise Exception(
+                "read_bootstrap_file: %s is not a "
+                " valid bootstrap file" % filename)
 
         i = 0
         with open(filename) as bs_file:
