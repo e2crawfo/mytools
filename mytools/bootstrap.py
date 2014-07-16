@@ -1,6 +1,7 @@
 import random
 import re
 import os
+from collections import defaultdict
 
 
 def draw_bootstrap_samples(data, num, rng=random):
@@ -45,7 +46,7 @@ def bootstrap_CI(alpha, stat_func, data, num, rng=random):
 class Bootstrapper:
 
     def __init__(self, verbose=False, write_raw_data=False, seed=1):
-        self.data = {}
+        self.data = defaultdict(list)
         self.verbose = verbose
         self.write_raw_data = write_raw_data
         self.seed = seed
@@ -141,9 +142,6 @@ class Bootstrapper:
         :type data:
 
         """
-
-        if not (index in self.data):
-            self.data[index] = []
 
         self.data[index].append(float(data))
 
