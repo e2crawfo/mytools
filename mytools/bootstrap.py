@@ -46,6 +46,7 @@ def bootstrap_CI(alpha, stat_func, data, num, rng=random):
 class Bootstrapper:
 
     def __init__(self, verbose=False, write_raw_data=False, seed=1):
+        self.order = []
         self.data = defaultdict(list)
         self.verbose = verbose
         self.write_raw_data = write_raw_data
@@ -142,8 +143,10 @@ class Bootstrapper:
         :type data:
 
         """
+        data = float(data)
 
-        self.data[index].append(float(data))
+        self.order.append((index, data))
+        self.data[index].append(data)
 
         if self.verbose:
             print ("Bootstrapper adding data ..."
