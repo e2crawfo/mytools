@@ -175,7 +175,7 @@ class Bootstrapper:
         smallest = min(s)
         return (s, m, CI, largest, smallest)
 
-    def print_summary(self, output_file):
+    def print_summary(self, output_file, flush=False):
         """
         Prints a summary of the data currently stored in the bootstrapper.
         Basically, we call get_stats on each index in the bootstrapper.
@@ -209,6 +209,9 @@ class Bootstrapper:
                 output_file.write("raw data: " + str(s) + "\n")
 
         print_footer(output_file, title)
+
+        if flush:
+            output_file.flush()
 
         if close:
             output_file.close()
