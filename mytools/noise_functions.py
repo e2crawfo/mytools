@@ -21,14 +21,38 @@ def ortho_vector(input_vec, normalize=False):
     normalize -- whether to normalize the vector before returning
     """
 
+    normed_input = input_vec / np.linalg.norm(input_vec)
     dim = len(input_vec)
     ortho = hrr.HRR(dim).v
-    proj = np.dot(input_vec, ortho) * input_vec
+    proj = np.dot(normed_input, ortho) * normed_input
     ortho -= proj
     assert np.allclose([np.dot(ortho, input_vec)], [0])
     if normalize:
         ortho = ortho / np.linalg.norm(ortho)
     return ortho
+
+
+def sample_cone(input_vec, N=1, angle=None, dot=None):
+    if angle is None and dot is None:
+        raise ValueError("Have to supply at least one of {angle, dot}")
+
+    if angle is not None:
+        dot = np.cos(angle)
+
+    for n in range(N):
+        o = ortho_vector(input_vec, normalize=True)
+
+        normed_input = input_vec / np.linalg.norm(input_vec)
+
+        sample = normed_input * dot + o * np.sqrt(1 - dot ** 2)
+        sample = np.reshape(sample, (1, sample.size))
+
+        if n == 0:
+            samples = sample
+        else:
+            samples = np.concatenate((samples, sample), axis=0)
+
+    return samples
 
 
 def output(trial_length, main, main_vector, alternate, noise_func=None):
