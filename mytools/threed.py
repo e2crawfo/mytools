@@ -35,17 +35,28 @@ def rotation_matrix(axis, theta):
                      [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]])
 
 
-def make_cap(r=1.0, cap_angle=0.33 * np.pi, direction=None, usteps=100, vsteps=100):
+def make_cap(r=1.0, cap_angle=0.33 * np.pi, direction=None,
+             usteps=100, vsteps=100, func=None):
 
     if direction is not None:
         assert np.linalg.norm(direction) > 0
 
     u = np.linspace(0, 2 * np.pi, usteps)
-    v = np.linspace(0, cap_angle, vsteps)
 
-    x = r * np.outer(np.cos(u), np.sin(v))
-    y = r * np.outer(np.sin(u), np.sin(v))
-    z = r * np.outer(np.ones(np.size(u)), np.cos(v))
+    if func is None:
+        v = np.linspace(0, cap_angle, vsteps)
+        x = r * np.outer(np.cos(u), np.sin(v))
+        y = r * np.outer(np.sin(u), np.sin(v))
+        z = r * np.outer(np.ones(np.size(u)), np.cos(v))
+    else:
+        v = np.array(
+            [np.linspace(0, max(func(uu), 0.01) * cap_angle, vsteps)
+             for uu in u])
+
+        u = np.reshape(u, (-1, 1))
+        x = r * np.cos(u) * np.sin(v)
+        y = r * np.sin(u) * np.sin(v)
+        z = r * np.ones(np.size(u)) * np.cos(v)
 
     if direction is not None:
         north = np.array([0, 0, 1])
