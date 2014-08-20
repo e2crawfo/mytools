@@ -357,7 +357,8 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
                         memoized_argvals[arg] = kwargs[arg]
                     elif (idx is not None and
                           idx >= default_index and idx < len(argspec.args)):
-                        memoized_argvals[arg] = argspec.defaults[idx - default_index]
+                        memoized_argvals[arg] = \
+                            argspec.defaults[idx - default_index]
 
                 filename = file_helpers.make_filename(
                     prefix_title, prefix_dir, config_dict=memoized_argvals,
