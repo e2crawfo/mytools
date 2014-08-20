@@ -294,6 +294,10 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
     prefix is the prefix of the files that get written. Can include a directory
     and that directory will get created if it doesn't already exist.
 
+    memoized_args is the set of args that will be memoized if they are provided
+    (i.e. if the function is called with different values of these args, then a
+    new file is created.)
+
     Returns a decorator that can be applied to functions such that whenever
     that function is called, a number of things happen:
 
@@ -341,22 +345,21 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
         def f(*args, **kwargs):
 
             prefix_dir, prefix_title = os.path.split(prefix)
+
             if memoized_args is not None:
                 memoized_argvals = {}
 
                 for arg, idx in zip(memoized_args, arg_indices):
                     if idx is not None and idx < len(args):
                         memoized_argvals[arg] = args[idx]
-                    else:
-                        try:
-                            memoized_argvals[arg] = kwargs[arg]
-                        except KeyError:
-                            raise Exception(
-                                "Memoized arguments have to be "
-                                "provided to function call")
+                    elif arg in kwargs:
+                        memoized_argvals[arg] = kwargs[arg]
+                    elif arg in argspec.defaults:
+                        memoized_argvals[arg] = argspec.defaults[arg]
 
                 filename = file_helpers.make_filename(
-                    prefix_title, prefix_dir, config_dict=memoized_argvals, use_time=False)
+                    prefix_title, prefix_dir, config_dict=memoized_argvals,
+                    use_time=False)
             else:
                 filename = file_helpers.make_filename(
                     prefix_title, prefix_dir, use_time=False)
