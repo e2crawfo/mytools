@@ -291,6 +291,9 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
     functions, where we only want to collect the data once, but might have
     to rerun analysis or plotting many times in order to make adjustments.
 
+    prefix is the prefix of the files that get written. Can include a directory
+    and that directory will get created if it doesn't already exist.
+
     Returns a decorator that can be applied to functions such that whenever
     that function is called, a number of things happen:
 
@@ -337,6 +340,7 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
 
         def f(*args, **kwargs):
 
+            prefix_dir, prefix_title = os.path.split(prefix)
             if memoized_args is not None:
                 memoized_argvals = {}
 
@@ -352,9 +356,10 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
                                 "provided to function call")
 
                 filename = file_helpers.make_filename(
-                    prefix, config_dict=memoized_argvals, use_time=False)
+                    prefix_title, prefix_dir, config_dict=memoized_argvals, use_time=False)
             else:
-                filename = prefix
+                filename = file_helpers.make_filename(
+                    prefix_title, prefix_dir, use_time=False)
 
             bootstrapper = Bootstrapper(
                 verbose=True, write_raw_data=True)
