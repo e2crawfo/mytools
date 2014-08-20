@@ -2,6 +2,9 @@ import random
 import re
 import os
 from collections import defaultdict, deque
+import inspect
+
+import file_helpers
 
 
 def draw_bootstrap_samples(data, num, rng=random):
@@ -136,7 +139,7 @@ class Bootstrapper:
                 " valid bootstrap file" % filename)
 
         if self.verbose:
-            print ("Bootstrapper reading from file...%s" % filename)
+            print ("Bootstrapper reading from file: %s" % filename)
 
         i = 0
         with open(filename) as bs_file:
@@ -263,7 +266,7 @@ class Bootstrapper:
             output_file.close()
 
         if self.verbose:
-            print ("Bootstrapper done reading file...")
+            print ("Bootstrapper done writing to file...")
 
 
 def print_header(output_file, string, char='*', width=15, left_newline=True):
@@ -279,3 +282,113 @@ def print_header(output_file, string, char='*', width=15, left_newline=True):
 def print_footer(output_file, string, char='*', width=15):
     print_header(output_file, "End " + string, char=char,
                  width=width, left_newline=False)
+
+
+def filestrap(prefix, memoized_args=None, can_delete=True):
+    """
+    The goal is basically to provide persistent memoization using the
+    Bootstrapper class.  Useful for quickly memoizing small exploratory
+    functions, where we only want to collect the data once, but might have
+    to rerun analysis or plotting many times in order to make adjustments.
+
+    Returns a decorator that can be applied to functions such that whenever
+    that function is called, a number of things happen:
+
+    1. An instance of the Bootstrapper class is created.
+
+    2. The Bootstrapper object tries to load data from a file whose name is
+    determined by prefix and the arguments supplied to the function.
+
+    3. If the file is found to be a valid summary file created by an instance
+    of the Bootstrapper class, then the data is loaded into the current
+    Bootstrapper, and the function returns without calling the
+    decorated function.
+
+    4. Otherwise, the decorated function is called in a context managed by the
+    Bootstrapper object (so calls to add_data inside that function go to that
+    Bootstrapper object).
+
+    5. Finally, the Bootstrapper, populated by the add_data calls inside the
+    function, is written to a file with the same name as before.
+
+    6. Whether or not the decorated function is called, the result of calling
+    the function is the Bootstrapper object. If there was a return value from
+    calling the decorated function, then it is stored in Bootstrapper object
+    under the index 'return_value'.
+    """
+
+    def decorator(func):
+
+        if memoized_args is not None:
+            argspec = inspect.getargspec(func)
+            valid_args = all([x in argspec.args for x in memoized_args])
+
+            if not (argspec.keywords or valid_args):
+                raise ValueError(
+                    "memoized_args must be names of possible "
+                    "arguments to decorated function")
+
+            arg_indices = []
+            for arg in memoized_args:
+                try:
+                    arg_indices.append(argspec.args.index(arg))
+                except:
+                    arg_indices.append(None)
+
+        def f(*args, **kwargs):
+
+            if memoized_args is not None:
+                memoized_argvals = {}
+
+                for arg, idx in zip(memoized_args, arg_indices):
+                    if idx is not None and idx < len(args):
+                        memoized_argvals[arg] = args[idx]
+                    else:
+                        try:
+                            memoized_argvals[arg] = kwargs[arg]
+                        except KeyError:
+                            raise Exception(
+                                "Memoized arguments have to be "
+                                "provided to function call")
+
+                filename = file_helpers.make_filename(
+                    prefix, config_dict=memoized_argvals, use_time=False)
+            else:
+                filename = prefix
+
+            bootstrapper = Bootstrapper(
+                verbose=True, write_raw_data=True)
+
+            loaded = False
+
+            if os.path.isfile(filename):
+                need_delete = False
+
+                try:
+                    bootstrapper.read_bootstrap_file(filename)
+                    loaded = True
+                except IOError:
+                    need_delete = True
+
+                if can_delete and need_delete:
+                    try:
+                        os.remove()
+                    except:
+                        raise IOError(
+                            'Filename %s points to invalid bootstrap file, '
+                            'but it cannot be deleted '
+                            '(maybe it is a directory?).' % filename)
+
+            if not loaded:
+                with bootstrapper:
+                    ret = func(*args, **kwargs)
+
+                bootstrapper.add_data('return_value', ret)
+
+                bootstrapper.print_summary(filename, flush=True)
+
+            return bootstrapper
+
+        return f
+
+    return decorator
