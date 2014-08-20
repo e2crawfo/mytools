@@ -1,7 +1,7 @@
 import random
 import re
 import os
-from collections import defaultdict
+from collections import defaultdict, deque
 
 
 def draw_bootstrap_samples(data, num, rng=random):
@@ -43,7 +43,47 @@ def bootstrap_CI(alpha, stat_func, data, num, rng=random):
     return lower_CI_bound, upper_CI_bound
 
 
+def add_data(index, data):
+    """
+    Module-level add_data. Adds data to the Bootstrapper object managing the
+    current context. Raises an exception if no Bootstapper context is active.
+    """
+
+    if len(Bootstrapper.context) == 0:
+        raise RuntimeError(
+            "module-level add_data must be called in a context managed "
+            "by an instance of the Bootstrapper class.")
+
+    bs = Bootstrapper.context[-1]
+
+    if not isinstance(bs, Bootstrapper):
+        raise RuntimeError(
+            "module-level add_data must be called in a context managed "
+            "by an instance of the Bootstrapper class.")
+
+    bs.add_data(index, data)
+
+
 class Bootstrapper:
+
+    context = deque(maxlen=100)  # static stack of bootstrapper objects
+
+    def __enter__(self):
+        Bootstrapper.context.append(self)
+        return self
+
+    def __exit__(self, dummy_exc_type, dummy_exc_value, dummy_tb):
+        if len(Bootstrapper.context) == 0:
+            raise RuntimeError(
+                "Bootstrapper.context in bad state; was empty when "
+                "exiting from a 'with' block.")
+
+        bs = Bootstrapper.context.pop()
+        if bs is not self:
+            raise RuntimeError(
+                "Bootstrapper.context in bad state; was expecting "
+                "current context to be '%s' but instead got "
+                "'%s'." % (self, bs))
 
     def __init__(self, verbose=False, write_raw_data=False, seed=1):
         self.order = []
@@ -81,7 +121,7 @@ class Bootstrapper:
         ignore_regex = re.compile(ignore_regex)
 
         if not os.path.isfile(filename):
-            raise Exception(
+            raise IOError(
                 "read_bootstrap_file: %s is not a valid file" % filename)
 
         num_summaries = 0
@@ -91,9 +131,12 @@ class Bootstrapper:
                     num_summaries += 1
 
         if not num_summaries:
-            raise Exception(
+            raise IOError(
                 "read_bootstrap_file: %s is not a "
                 " valid bootstrap file" % filename)
+
+        if self.verbose:
+            print ("Bootstrapper reading from file...%s" % filename)
 
         i = 0
         with open(filename) as bs_file:
@@ -119,8 +162,8 @@ class Bootstrapper:
                 raw_data = bs_file.next()
 
                 if "raw data" not in raw_data:
-                    raise Exception("Error reading bootstrap file."
-                                    " No raw data in file")
+                    raise IOError("Error reading bootstrap file."
+                                  " No raw data in file")
 
                 if match_regex.search(name) and not ignore_regex.search(name):
                     raw_data = self.float_re.findall(raw_data)
@@ -189,6 +232,9 @@ class Bootstrapper:
             output_file = open(output_file, 'w')
             close = True
 
+        if self.verbose:
+            print ("Bootstrapper writing summary to file...")
+
         title = "Bootstrap Summary"
         print_header(output_file, title)
 
@@ -215,6 +261,9 @@ class Bootstrapper:
 
         if close:
             output_file.close()
+
+        if self.verbose:
+            print ("Bootstrapper done reading file...")
 
 
 def print_header(output_file, string, char='*', width=15, left_newline=True):
