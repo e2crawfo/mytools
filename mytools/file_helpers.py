@@ -7,6 +7,10 @@ import numpy as np
 def make_filename(main_title, directory='.', config_dict={}, use_time=True,
                   sep='_', extension='', omit=[]):
     """
+    Currently cannot use strings as values in the config_dict.
+    Currently, key/value pairs are put into the filename by the alphabetical
+    order of the keys.
+
     :param main_title: the main title for the file
     :type string:
 
@@ -31,7 +35,10 @@ def make_filename(main_title, directory='.', config_dict={}, use_time=True,
         directory += '/'
 
     labels = [directory + main_title]
-    for label, value in config_dict.iteritems():
+    key_vals = list(config_dict.iteritems())
+    key_vals.sort(key=lambda x: x[0])
+
+    for label, value in key_vals:
         if not str(label) in omit and not hasattr(value, '__len__'):
             labels.append(str(label))
             labels.append(str(value))
