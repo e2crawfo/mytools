@@ -328,6 +328,7 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
 
         if memoized_args is not None:
             argspec = inspect.getargspec(func)
+            default_index = len(argspec.args) - len(argspec.defaults)
             valid_args = all([x in argspec.args for x in memoized_args])
 
             if not (argspec.keywords or valid_args):
@@ -354,8 +355,9 @@ def filestrap(prefix, memoized_args=None, can_delete=True):
                         memoized_argvals[arg] = args[idx]
                     elif arg in kwargs:
                         memoized_argvals[arg] = kwargs[arg]
-                    elif arg in argspec.defaults:
-                        memoized_argvals[arg] = argspec.defaults[arg]
+                    elif (idx is not None and
+                          idx >= default_index and idx < len(argspec.args)):
+                        memoized_argvals[arg] = argspec.defaults[idx - default_index]
 
                 filename = file_helpers.make_filename(
                     prefix_title, prefix_dir, config_dict=memoized_argvals,
